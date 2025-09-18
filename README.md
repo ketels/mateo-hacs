@@ -1,42 +1,38 @@
-# Mateo School Meals (HACS)
+# Mateo School Meals integration for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
 [![License][license-shield]](LICENSE)
 [![hacs][hacs_badge]][hacs]
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
-Home Assistant integration to expose Swedish school lunches from Mateo public endpoints.
+This is a cutom integration for Home Assistant to expose Swedish school lunches from Mateo public endpoints.
 
 
-See `spec.md` for full specification and `tasks.md` for the build plan.
+### HACS (Recommended)
 
-## Installation (dev)
+1. Ensure that [HACS](https://hacs.xyz/) is installed in your Home Assistant instance.
 
-## Development
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -U pip wheel
-pip install -U homeassistant aiohttp pytest pytest-asyncio pytest-homeassistant-custom-component ruff mypy
-```
-Run HA pointing to a local config: `hass -c ./_ha_config`.
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ketels&repository=mateo-hacs&category=integration)
 
-Run tests:
-```bash
-pytest -q
-```
+-- or --
 
-### Manual Refresh Service
-Force an immediate data fetch for all configured entries via Developer Tools → Services:
+2. Add this repository as a custom repository in HACS:
+   - Open HACS in Home Assistant.
+   - Go to **Integrations**.
+   - Click on the three dots in the top-right corner and select **Custom repositories**.
+   - Add the following URL: `https://github.com/ketels/mateo-hacs`.
+   - Select **Integration** as the category.
+3. Search for "Mateo School Meals" in the HACS integrations list and install it.
 
-Service: `mateo_meals.refresh`
+### Manual Installation
 
-Optional service data to target a single entry:
-```yaml
-entry_id: <config_entry_id>
-```
+1. Download the latest release from the [GitHub Releases page](https://github.com/ketels/mateo-hacs/releases).
+2. Extract the downloaded archive.
+3. Copy the `custom_components/mateo-hacs` folder to your Home Assistant `custom_components` directory.
+   - Example: `/config/custom_components/mateo-hacs`
+4. Restart Home Assistant.
 
-Contributions welcome — see `CONTRIBUTING.md`.
+
 
 <!-- Badges -->
 [releases-shield]: https://img.shields.io/github/v/release/ketels/mateo-hacs?style=for-the-badge
