@@ -4,8 +4,10 @@
   "version": "1.0.0",
   "documentation": "https://github.com/ketels/mateo-hacs",
   "issue_tracker": "https://github.com/ketels/mateo-hacs/issues",
+  "requirements": [],
   "codeowners": ["@ketels"],
   "iot_class": "cloud_polling",
-  "config_flow": true,
-  "requirements": []
+  "integration_type": "service",
+  "loggers": ["custom_components.mateo_meals"],
+  "config_flow": true
 }

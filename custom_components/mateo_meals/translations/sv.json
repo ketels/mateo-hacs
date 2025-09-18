@@ -1,9 +1,32 @@
 {
+  "title": "Mateo Skolluncher",
   "config": {
     "step": {
-      "user": {"title": "Välj kommun", "description": "Välj kommunen som tillhandahåller skolmaten.", "data": {"municipality": "Kommun"}},
-      "school": {"title": "Välj skola", "description": "Välj skolan att hämta menyer för.", "data": {"school": "Skola"}}
+      "user": {
+        "title": "Anslut Mateo",
+        "description": "Välj skola/kommun eller ange filter för att hämta matsedel.",
+        "data": {
+          "school": "Skola",
+          "municipality": "Kommun",
+          "unit_id": "Enhets-ID (om tillämpligt)"
+        }
+      }
     },
-    "error": {"cannot_connect": "Kunde inte ansluta"}
+    "error": {
+      "cannot_connect": "Kunde inte ansluta till Mateo.",
+      "unknown": "Okänt fel."
+    },
+    "abort": {
+      "already_configured": "Denna enhet/tjänst är redan konfigurerad."
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Uppdatera Mateo-data",
+      "description": "Tvinga fram en omedelbar uppdatering från Mateo.",
+      "fields": {
+        "entry_id": "Entry ID"
+      }
+    }
   }
 }
