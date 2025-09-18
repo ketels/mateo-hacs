@@ -1,0 +1,27 @@
+# Virtual environments
+.venv/
+.ha-venv/
+
+# Local Home Assistant development config (not for release)
+dev_config/
+
+# SQLite databases and WAL/SHM sidecars
+home-assistant_v2.db*
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Test / coverage artifacts
+.pytest_cache/
+.mypy_cache/
+coverage.xml
+htmlcov/
+
+# Editor / OS noise
+.DS_Store
+*.swp
+*.code-workspace
+
+# Ruff / lint caches (if any appear)
+.ruff_cache/

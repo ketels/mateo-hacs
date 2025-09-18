@@ -1,0 +1,9 @@
+{
+  "config": {
+    "step": {
+      "user": {"title": "Select municipality", "description": "Choose the municipality providing the school meals.", "data": {"municipality": "Municipality"}},
+      "school": {"title": "Select school", "description": "Choose the school to track meals for.", "data": {"school": "School"}}
+    },
+    "error": {"cannot_connect": "Could not connect"}
+  }
+}

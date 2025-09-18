@@ -1,0 +1,9 @@
+{
+  "config": {
+    "step": {
+      "user": {"title": "Välj kommun", "description": "Välj kommunen som tillhandahåller skolmaten.", "data": {"municipality": "Kommun"}},
+      "school": {"title": "Välj skola", "description": "Välj skolan att hämta menyer för.", "data": {"school": "Skola"}}
+    },
+    "error": {"cannot_connect": "Kunde inte ansluta"}
+  }
+}

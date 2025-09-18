@@ -1,0 +1,25 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+addopts = "-q --cov=custom_components/mateo_meals --cov-report=term-missing --cov-fail-under=75"
+
+[tool.ruff]
+line-length = 100
+select = ["E","F","W","I","UP","ASYNC","S","B","C4"]
+ignore = ["E203","W503","S101"]
+target-version = "py311"
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components"]
+combine-as-imports = true
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+

@@ -1,0 +1,6 @@
+{
+  "name": "Mateo School Meals",
+  "domains": ["mateo_meals"],
+  "homeassistant": "2024.12.0"
+}
+{ "name": "Mateo Meals", "country": "SE", "homeassistant": "2024.12.0" }
