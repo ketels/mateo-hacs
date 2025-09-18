@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 from unittest.mock import patch
-from custom_components.mateo_meals import config_flow as cf
 
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+
+from custom_components.mateo_meals import config_flow as cf
 
 DOMAIN = "mateo_meals"
 

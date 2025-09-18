@@ -1,6 +1,4 @@
-import pytest
-
 pytest_plugins = (
-	"pytest_homeassistant_custom_component",
+    "pytest_homeassistant_custom_component",
 )
 

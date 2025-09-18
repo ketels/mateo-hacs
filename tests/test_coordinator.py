@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import date
 from typing import Any
 from unittest.mock import patch
 
@@ -12,7 +11,12 @@ from custom_components.mateo_meals.coordinator import MateoConfig, MateoMealsCoo
 
 @pytest.mark.asyncio
 async def test_coordinator_parses_weeks(hass: HomeAssistant) -> None:
-    cfg = MateoConfig(slug="molndal", school_id=13, school_name="Jungfrustigens förskola", municipality_name="Mölndal")
+    cfg = MateoConfig(
+        slug="molndal",
+        school_id=13,
+        school_name="Jungfrustigens förskola",
+        municipality_name="Mölndal",
+    )
     coord = MateoMealsCoordinator(hass, cfg)
 
     async def fake_fetch(url: str) -> Any:

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import logging
+from datetime import UTC, datetime
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
@@ -24,6 +24,9 @@ async def _http_json(hass: HomeAssistant, url: str) -> Any:
         if resp.status != 200:
             raise RuntimeError(f"HTTP {resp.status} for {url}")
         return await resp.json(content_type=None)
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class MateoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -84,18 +87,31 @@ class MateoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data_schema=vol.Schema({vol.Required("school"): int}),
                     errors={"base": "cannot_connect"},
                 )
-            districts = districts_payload.get("districts", []) if isinstance(districts_payload, dict) else []
-            id_to_name = {int(d.get("id")): d.get("name") for d in districts if d.get("id") is not None}
+            districts = (
+                districts_payload.get("districts", [])
+                if isinstance(districts_payload, dict)
+                else []
+            )
+            id_to_name = {
+                int(d.get("id")): d.get("name")
+                for d in districts
+                if d.get("id") is not None
+            }
             school_name = id_to_name.get(school_id, str(school_id))
             unique_id = f"{DOMAIN}:{slug}:{school_id}"
             await self.async_set_unique_id(unique_id)
             self._abort_if_unique_id_configured()
             try:
-                now_utc = datetime.now(timezone.utc)
+                now_utc = datetime.now(UTC)
                 week = _iso_week_string(now_utc)
-                await _http_json(self.hass, BASE_MENU.format(slug=slug, school_id=school_id, week=week))
+                await _http_json(
+                    self.hass,
+                    BASE_MENU.format(slug=slug, school_id=school_id, week=week),
+                )
             except Exception:  # noqa: BLE001
-                pass
+                _LOGGER.debug(
+                    "Optional initial menu fetch failed for %s/%s", slug, school_id
+                )
             title = f"{self._selected_municipality_name} – {school_name}"
             data = {
                 "slug": slug,
@@ -113,7 +129,11 @@ class MateoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data_schema=vol.Schema({vol.Required("school"): int}),
                 errors={"base": "cannot_connect"},
             )
-        districts = districts_payload.get("districts", []) if isinstance(districts_payload, dict) else []
+        districts = (
+            districts_payload.get("districts", [])
+            if isinstance(districts_payload, dict)
+            else []
+        )
         id_to_name = {int(d.get("id")): d.get("name") for d in districts if d.get("id") is not None}
         if id_to_name:
             schema = vol.Schema({vol.Required("school"): vol.In(id_to_name)})
@@ -157,8 +177,13 @@ class MateoOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_show_form(step_id="school", data_schema=schema)
         school_id = int(user_input["school"])
         school_name = id_to_name.get(school_id, str(school_id))
-        return self.async_create_entry(title="", data={"school_id": school_id, "school_name": school_name})
+        return self.async_create_entry(
+            title="",
+            data={"school_id": school_id, "school_name": school_name},
+        )
 
 
-async def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> MateoOptionsFlowHandler:  # noqa: D401
+async def async_get_options_flow(
+    config_entry: config_entries.ConfigEntry,
+) -> MateoOptionsFlowHandler:  # noqa: D401
     return MateoOptionsFlowHandler(config_entry)

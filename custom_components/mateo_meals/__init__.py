@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -12,7 +12,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .coordinator import MateoMealsCoordinator
 
 # Store coordinators per entry_id for refresh service
-COORDINATORS: dict[str, "MateoMealsCoordinator"] = {}
+COORDINATORS: dict[str, MateoMealsCoordinator] = {}
 
 PLATFORMS: list[str] = ["sensor"]
 

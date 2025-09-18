@@ -1,17 +1,23 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.mateo_meals.coordinator import MateoConfig, MateoMealsCoordinator
+from custom_components.mateo_meals.coordinator import (
+    MateoConfig,
+    MateoMealsCoordinator,
+)
 from custom_components.mateo_meals.sensor import MateoMealsSensor
 
 
 @pytest.mark.asyncio
 async def test_sensor_state_joined_names(hass: HomeAssistant) -> None:
-    cfg = MateoConfig(slug="molndal", school_id=13, school_name="Jungfrustigens förskola", municipality_name="Mölndal")
+    cfg = MateoConfig(
+        slug="molndal",
+        school_id=13,
+        school_name="Jungfrustigens förskola",
+        municipality_name="Mölndal",
+    )
     coord = MateoMealsCoordinator(hass, cfg)
 
     # Inject coordinator data directly
