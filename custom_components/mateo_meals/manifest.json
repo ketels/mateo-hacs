@@ -1,7 +1,7 @@
 {
   "domain": "mateo_meals",
   "name": "Mateo School Meals",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "documentation": "https://github.com/ketels/mateo-hacs",
   "issue_tracker": "https://github.com/ketels/mateo-hacs/issues",
   "codeowners": ["@ketels"],
