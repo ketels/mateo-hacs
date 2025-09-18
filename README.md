@@ -1,5 +1,10 @@
 # Mateo School Meals (HACS)
 
+[![GitHub Release][releases-shield]][releases]
+[![License][license-shield]](LICENSE)
+[![hacs][hacs_badge]][hacs]
+[![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
+
 Home Assistant integration to expose Swedish school lunches from Mateo public endpoints.
 
 
@@ -32,3 +37,12 @@ entry_id: <config_entry_id>
 ```
 
 Contributions welcome — see `CONTRIBUTING.md`.
+
+<!-- Badges -->
+[releases-shield]: https://img.shields.io/github/v/release/ketels/mateo-hacs?style=for-the-badge
+[releases]: https://github.com/ketels/mateo-hacs/releases
+[license-shield]: https://img.shields.io/github/license/ketels/mateo-hacs?style=for-the-badge
+[hacs_badge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
+[hacs]: https://hacs.xyz/
+[buymecoffeebadge]: https://img.shields.io/badge/Buy%20Me%20a%20Coffee-donate-yellow?style=for-the-badge
+[buymecoffee]: https://www.buymeacoffee.com/ketels
