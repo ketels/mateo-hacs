@@ -26,5 +26,6 @@ async def test_coordinator_parses_weeks(hass: HomeAssistant) -> None:
     with patch.object(coord, "_async_fetch_json", side_effect=fake_fetch):
         data = await coord._async_update_data()
 
-    assert data["week_meals"]["2025-09-15"][0]["name"] == "Korv stroganoff"
-    assert data["today_meals"] is not None
+    # meals_by_date should contain normalized names
+    assert data["meals_by_date"]["2025-09-15"][0] == "Korv stroganoff"
+    assert isinstance(data["today_meals"], list)
