@@ -1,14 +1,13 @@
 {
-  "title": "Mateo Skolluncher",
+  "title": "Mateo Skollunch",
   "config": {
     "step": {
       "user": {
         "title": "Anslut Mateo",
-        "description": "Välj skola/kommun eller ange filter för att hämta matsedel.",
+        "description": "Välj kommun och skola för att hämta matsedel.",
         "data": {
           "school": "Skola",
-          "municipality": "Kommun",
-          "unit_id": "Enhets-ID (om tillämpligt)"
+          "municipality": "Kommun"
         }
       }
     },
@@ -17,7 +16,7 @@
       "unknown": "Okänt fel."
     },
     "abort": {
-      "already_configured": "Denna enhet/tjänst är redan konfigurerad."
+      "already_configured": "Denna skola är redan konfigurerad."
     }
   },
   "services": {
@@ -26,6 +25,16 @@
       "description": "Tvinga fram en omedelbar uppdatering från Mateo.",
       "fields": {
         "entry_id": "Entry ID"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "meal": {
+        "name": "Skollunch",
+        "state": {
+          "no_menu": "Ingen meny idag"
+        }
       }
     }
   }

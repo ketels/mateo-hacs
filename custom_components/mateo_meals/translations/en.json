@@ -1,32 +1,43 @@
 {
   "title": "Mateo School Lunch",
-  "config": {
-    "step": {
-      "user": {
-        "title": "Connect Mateo",
-        "description": "Select school/municipality or enter a filter to fetch the menu.",
-        "data": {
-          "school": "School",
-          "municipality": "Municipality",
-          "unit_id": "Unit ID (if applicable)"
+  {
+    "title": "Mateo School Meals",
+    "config": {
+      "step": {
+        "user": {
+          "title": "Connect Mateo",
+          "description": "Select municipality and school to fetch the meal plan.",
+          "data": {
+            "school": "School",
+            "municipality": "Municipality"
+          }
+        }
+      },
+      "error": {
+        "cannot_connect": "Could not connect to Mateo.",
+        "unknown": "Unknown error."
+      },
+      "abort": {
+        "already_configured": "This school is already configured."
+      }
+    },
+    "services": {
+      "refresh": {
+        "name": "Refresh Mateo data",
+        "description": "Force an immediate update from Mateo.",
+        "fields": {
+          "entry_id": "Entry ID"
         }
       }
     },
-    "error": {
-      "cannot_connect": "Could not connect to Mateo.",
-      "unknown": "Unknown error."
-    },
-    "abort": {
-      "already_configured": "This device/service is already configured."
-    }
-  },
-  "services": {
-    "refresh": {
-      "name": "Update Mateo data",
-      "description": "Force an immediate update from Mateo.",
-      "fields": {
-        "entry_id": "Entry ID"
+    "entity": {
+      "sensor": {
+        "meal": {
+          "name": "School Lunch",
+          "state": {
+            "no_menu": "No menu today"
+          }
+        }
       }
     }
   }
-}

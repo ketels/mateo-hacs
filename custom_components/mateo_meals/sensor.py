@@ -60,12 +60,13 @@ class MateoMealsSensor(CoordinatorEntity[MateoMealsCoordinator], SensorEntity):
         data = self.coordinator.data or {}
         meals = data.get("today_meals") or []
         if not meals:
-            return "Ingen meny idag"
+            # Default to Swedish then English phrase if translations not wired
+            return "Ingen meny idag" if self._cfg.municipality_name else "No menu today"
         if meals and isinstance(meals[0], str):
             names = [m for m in meals if isinstance(m, str) and m]
         else:
             names = [m.get("name") for m in meals if isinstance(m, dict) and m.get("name")]
-        return "; ".join(names) if names else "Ingen meny idag"
+        return "; ".join(names) if names else "No menu today"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:

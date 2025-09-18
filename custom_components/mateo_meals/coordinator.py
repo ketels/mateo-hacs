@@ -44,7 +44,6 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=timedelta(hours=24),
         )
         self._cfg = cfg
-        self._exception_days_cache: list[dict[str, Any]] | None = None
 
     async def _async_fetch_json(self, url: str) -> Any:
         session = aiohttp_client.async_get_clientsession(self.hass)
@@ -56,18 +55,17 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return await resp.json(content_type=None)
 
     async def _async_get_exception_days(self) -> list[dict[str, Any]]:  # noqa: D401 (internal helper)
-        if self._exception_days_cache is not None:
-            return self._exception_days_cache
         url = BASE_DISTRICTS.format(slug=self._cfg.slug)
-        payload = await self._async_fetch_json(url)
+        try:
+            payload = await self._async_fetch_json(url)
+        except Exception:  # noqa: BLE001
+            return []
         districts = payload.get("districts", []) if isinstance(payload, dict) else []
-        # Merge all exception days for simplicity
         exc: list[dict[str, Any]] = []
         for d in districts:
             for ex in d.get("districts_exception_days", []) or []:
                 start = ex.get("start")
                 end = ex.get("end")
-                # Normalize to YYYY-MM-DD if present
                 if start:
                     sdt = _local_date_from_iso(start)
                     ex["start"] = sdt.isoformat() if sdt else start
@@ -75,7 +73,6 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     edt = _local_date_from_iso(end)
                     ex["end"] = edt.isoformat() if edt else end
                 exc.append(ex)
-        self._exception_days_cache = exc
         return exc
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -129,8 +126,10 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if names:
                     meals_by_date[d] = names
         meal_names_today = meals_by_date.get(today_str, [])
+        exception_days = await self._async_get_exception_days()
         return {
             "today_date": today_str,
             "today_meals": meal_names_today,
             "meals_by_date": meals_by_date,
+            "exception_days": exception_days,
         }

@@ -7,8 +7,7 @@
         "description": "Set up the Mateo integration.",
         "data": {
           "school": "School",
-          "municipality": "Municipality",
-          "unit_id": "Unit ID"
+          "municipality": "Municipality"
         }
       }
     },
