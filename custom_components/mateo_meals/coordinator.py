@@ -47,7 +47,7 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_fetch_json(self, url: str) -> Any:
         session = aiohttp_client.async_get_clientsession(self.hass)
-        headers = {"User-Agent": "homeassistant-mateo-meals/0.1"}
+        headers = {"User-Agent": "homeassistant-mateo-meals/1.1.0"}
         async with session.get(url, timeout=20, headers=headers) as resp:
             if resp.status != 200:
                 text = await resp.text()
