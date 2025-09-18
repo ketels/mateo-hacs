@@ -48,9 +48,11 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
 	async def _async_fetch_json(self, url: str) -> Any:
 		session = aiohttp_client.async_get_clientsession(self.hass)
-		async with session.get(url, timeout=20) as resp:
+		headers = {"User-Agent": "homeassistant-mateo-meals/0.1"}
+		async with session.get(url, timeout=20, headers=headers) as resp:
 			if resp.status != 200:
-				raise UpdateFailed(f"HTTP {resp.status} for {url}")
+				text = await resp.text()
+				raise UpdateFailed(f"HTTP {resp.status} for {url} body={text[:120]}")
 			return await resp.json(content_type=None)
 
 	async def _async_get_exception_days(self) -> list[dict[str, Any]]:
@@ -77,22 +79,32 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 		return exc
 
 	async def _async_update_data(self) -> dict[str, Any]:
-		# Current and next ISO week starting Monday
+		# Current and next week (simple week numbers used in filename pattern school_week.json)
 		now = datetime.now(timezone.utc).date()
 		weekday = now.weekday()  # Mon=0
 		monday = now - timedelta(days=weekday)
 		next_monday = monday + timedelta(days=7)
-		weeks = (_iso_week_string(monday), _iso_week_string(next_monday))
-
+		year, week_cur, _ = monday.isocalendar()
+		year_next, week_next, _ = next_monday.isocalendar()
+		# Build primary URL list using week numbers (e.g. 82_38.json)
+		week_numbers = (week_cur, week_next)
 		urls = [
-			BASE_MENU.format(slug=self._cfg.slug, school_id=self._cfg.school_id, week=w)
-			for w in weeks
+			BASE_MENU.format(slug=self._cfg.slug, school_id=self._cfg.school_id, weeknum=w)
+			for w in week_numbers
 		]
 
 		try:
 			payloads = [await self._async_fetch_json(u) for u in urls]
-		except Exception as err:  # noqa: BLE001
-			raise UpdateFailed(str(err)) from err
+		except Exception as primary_err:  # noqa: BLE001
+			# Fallback: try legacy ISO pattern if primary failed entirely
+			try:
+				legacy_urls = [
+					f"https://objects.dc-fbg1.glesys.net/mateo.{self._cfg.slug}/menus/app/{self._cfg.school_id}_{_iso_week_string(monday)}.json",
+					f"https://objects.dc-fbg1.glesys.net/mateo.{self._cfg.slug}/menus/app/{self._cfg.school_id}_{_iso_week_string(next_monday)}.json",
+				]
+				payloads = [await self._async_fetch_json(u) for u in legacy_urls]
+			except Exception:
+				raise UpdateFailed(str(primary_err)) from primary_err
 
 		week_maps: list[dict[str, list[dict[str, Any]]]] = []
 		for payload in payloads:
@@ -113,18 +125,23 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 		today_str = now.isoformat()
 		today_meals = week_maps[0].get(today_str, []) if week_maps else []
 
+		week_current_map = week_maps[0] if week_maps else {}
+		# Minimize payload: convert today's meals to list of names only
+		meal_names = [m.get("name") for m in today_meals if isinstance(m, dict) and m.get("name")]
 		data: dict[str, Any] = {
 			"municipality_slug": self._cfg.slug,
 			"municipality_name": self._cfg.municipality_name,
 			"school_id": self._cfg.school_id,
 			"school_name": self._cfg.school_name,
 			"today_date": today_str,
-			"today_meals": today_meals,
-			"week_iso": weeks[0],
-			"week_meals": week_maps[0],
-			"next_week_iso": weeks[1],
-			"next_week_meals": week_maps[1],
-			"exception_days": await self._async_get_exception_days(),
+			"today_meals": meal_names,
+			"week_number": week_cur,
+			"week_meals_summary": {k: len(v) for k, v in week_current_map.items()},
+			"next_week_number": week_next,
+			"next_week_meals_summary": {k: len(v) for k, v in (week_maps[1] or {}).items()} if len(week_maps) > 1 else {},
+			"week_iso": _iso_week_string(monday),
+			"next_week_iso": _iso_week_string(next_monday),
+			# Omit detailed exception_days list to keep attribute size small
 			"last_update": datetime.now(timezone.utc).isoformat(),
 			"source": f"mateo.{self._cfg.slug}",
 		}

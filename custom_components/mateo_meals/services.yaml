@@ -1,0 +1,9 @@
+refresh:
+  name: Force data refresh
+  description: Trigger an immediate Mateo Meals data update for all entries or a single config entry.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Limit refresh to a single config entry (optional).
+      required: false
+      example: 123456abcdef

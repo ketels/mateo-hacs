@@ -10,6 +10,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import MateoConfig, MateoMealsCoordinator
+from . import COORDINATORS
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
@@ -24,8 +28,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 		municipality_name=data.get("municipality_name", data["slug"]),
 	)
 	coordinator = MateoMealsCoordinator(hass, cfg)
-	await coordinator.async_config_entry_first_refresh()
+	try:
+		await coordinator.async_config_entry_first_refresh()
+	except Exception as err:  # noqa: BLE001
+		_LOGGER.warning("Initial Mateo Meals data fetch failed: %s", err)
+	COORDINATORS[entry.entry_id] = coordinator
 	entity = MateoMealsSensor(coordinator, cfg, entry.entry_id)
+	_LOGGER.debug("Adding Mateo Meals sensor for school %s (entry %s)", cfg.school_name, entry.entry_id)
 	async_add_entities([entity])
 
 
@@ -53,6 +62,4 @@ class MateoMealsSensor(CoordinatorEntity[MateoMealsCoordinator], SensorEntity):
 		data = self.coordinator.data or {}
 		return data
 
-	@property
-	def entity_id(self) -> str:  # type: ignore[override]
-		return f"sensor.mateo_meals_{self._cfg.slug}_{self._cfg.school_id}"
+	# Rely on Home Assistant's default entity_id generation (no override)
