@@ -6,7 +6,7 @@ addopts = "-q --cov=custom_components/mateo_meals --cov-report=term-missing --co
 [tool.ruff]
 line-length = 100
 select = ["E","F","W","I","UP","ASYNC","S","B","C4"]
-ignore = ["E203","W503","S101"]
+ignore = ["E203","S101"]
 target-version = "py311"
 
 [tool.ruff.lint.isort]
