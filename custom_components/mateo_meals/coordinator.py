@@ -125,24 +125,17 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 		today_str = now.isoformat()
 		today_meals = week_maps[0].get(today_str, []) if week_maps else []
 
-		week_current_map = week_maps[0] if week_maps else {}
-		# Minimize payload: convert today's meals to list of names only
-		meal_names = [m.get("name") for m in today_meals if isinstance(m, dict) and m.get("name")]
-		data: dict[str, Any] = {
-			"municipality_slug": self._cfg.slug,
-			"municipality_name": self._cfg.municipality_name,
-			"school_id": self._cfg.school_id,
-			"school_name": self._cfg.school_name,
+		# Build minimal meals_by_date map for current + next week
+		meals_by_date: dict[str, list[str]] = {}
+		for wm in week_maps:
+			for d, meals in wm.items():
+				names_raw = [m.get("name") for m in meals if isinstance(m, dict) and m.get("name")]
+				names = [n.strip() for n in names_raw if isinstance(n, str) and n.strip()]
+				if names:
+					meals_by_date[d] = names
+		meal_names_today = meals_by_date.get(today_str, [])
+		return {
 			"today_date": today_str,
-			"today_meals": meal_names,
-			"week_number": week_cur,
-			"week_meals_summary": {k: len(v) for k, v in week_current_map.items()},
-			"next_week_number": week_next,
-			"next_week_meals_summary": {k: len(v) for k, v in (week_maps[1] or {}).items()} if len(week_maps) > 1 else {},
-			"week_iso": _iso_week_string(monday),
-			"next_week_iso": _iso_week_string(next_monday),
-			# Omit detailed exception_days list to keep attribute size small
-			"last_update": datetime.now(timezone.utc).isoformat(),
-			"source": f"mateo.{self._cfg.slug}",
+			"today_meals": meal_names_today,
+			"meals_by_date": meals_by_date,
 		}
-		return data

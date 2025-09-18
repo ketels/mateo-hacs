@@ -54,7 +54,12 @@ class MateoMealsSensor(CoordinatorEntity[MateoMealsCoordinator], SensorEntity):
 		meals = data.get("today_meals") or []
 		if not meals:
 			return "Ingen meny idag"
-		names = [m.get("name") for m in meals if isinstance(m, dict) and m.get("name")]
+		# Support either list[str] (current minimal model) or list[dict]
+		if meals and isinstance(meals[0], str):
+			names = [m for m in meals if isinstance(m, str) and m]
+		else:
+			names = [m.get("name") for m in meals if isinstance(m, dict) and m.get("name")]
+		# Debug logging removed after verification
 		return "; ".join(names) if names else "Ingen meny idag"
 
 	@property
