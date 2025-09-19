@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.typing import ConfigType
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
 
 from .const import (
     DOMAIN,
@@ -41,6 +43,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     if "refresh" not in services:
         hass.services.async_register(DOMAIN, "refresh", _handle_refresh_service)
     return True
+
+
+# Indicate this integration is config-entry only (no YAML options)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: D401

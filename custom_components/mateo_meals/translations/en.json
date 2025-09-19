@@ -43,7 +43,10 @@
       "name": "Refresh Mateo data",
       "description": "Force an immediate update from Mateo.",
       "fields": {
-        "entry_id": "Entry ID"
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional: target specific config entry; omit to refresh all."
+        }
       }
     }
   },

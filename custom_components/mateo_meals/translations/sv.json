@@ -43,7 +43,10 @@
       "name": "Uppdatera Mateo-data",
       "description": "Tvinga fram en omedelbar uppdatering från Mateo.",
       "fields": {
-        "entry_id": "Entry ID"
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Valfritt: ange ett specifikt config entry-ID; utelämna för alla."
+        }
       }
     }
   },
