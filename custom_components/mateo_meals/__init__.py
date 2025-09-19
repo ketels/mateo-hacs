@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import logging
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -62,6 +62,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     except Exception as err:  # noqa: BLE001
         logger.warning("Initial Mateo Meals data fetch failed: %s", err)
     COORDINATORS[entry.entry_id] = coordinator
+
+    async def _update_listener(updated_entry: ConfigEntry) -> None:
+        coord = COORDINATORS.get(updated_entry.entry_id)
+        if not coord:
+            return
+        # Adjust polling interval dynamically if user changed update interval hours.
+        new_hours = int(
+            updated_entry.options.get(CONF_UPDATE_INTERVAL_HOURS, DEFAULT_UPDATE_INTERVAL_HOURS)
+        )
+        new_hours = max(1, new_hours)
+        # Only update if changed to avoid resetting loop unnecessarily.
+        if coord.update_interval and coord.update_interval.total_seconds() == new_hours * 3600:
+            return
+        coord.update_interval = timedelta(hours=new_hours)
+        # Force a refresh so new schedule has fresh data soon.
+        await coord.async_request_refresh()
+
+    # Attach listener for dynamic option changes.
+    entry.async_on_unload(entry.add_update_listener(_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
