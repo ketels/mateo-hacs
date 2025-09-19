@@ -14,7 +14,7 @@ if TYPE_CHECKING:  # pragma: no cover
 # Store coordinators per entry_id for refresh service
 COORDINATORS: dict[str, MateoMealsCoordinator] = {}
 
-PLATFORMS: list[str] = ["sensor"]
+PLATFORMS: list[str] = ["sensor", "calendar"]
 
 
 async def _handle_refresh_service(hass: HomeAssistant, call: ServiceCall) -> None:
