@@ -19,6 +19,25 @@
       "already_configured": "This school is already configured."
     }
   },
+  "options": {
+    "step": {
+      "school": {
+        "title": "Mateo options",
+        "description": "Adjust meal lookup, update frequency and display settings.",
+        "data": {
+          "school": "School",
+          "days_ahead": "Days ahead",
+          "update_interval_hours": "Update interval (hours)",
+          "serving_start": "Serving window start",
+          "serving_end": "Serving window end",
+          "include_weekends": "Include weekends"
+        }
+      }
+    },
+    "error": {
+      "invalid_time": "Invalid time format (HH:MM)"
+    }
+  },
   "services": {
     "refresh": {
       "name": "Refresh Mateo data",
