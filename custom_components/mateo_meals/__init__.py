@@ -67,5 +67,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: D401
-    COORDINATORS.pop(entry.entry_id, None)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    # Unload platforms first; only drop coordinator if they unloaded cleanly.
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unloaded:
+        COORDINATORS.pop(entry.entry_id, None)
+    # If no more entries remain, remove the refresh service to be tidy.
+    if not COORDINATORS and DOMAIN in hass.services.async_services():  # type: ignore[attr-defined]
+        domain_services = hass.services.async_services().get(DOMAIN, {})  # type: ignore[attr-defined]
+        if "refresh" in domain_services:
+            hass.services.async_remove(DOMAIN, "refresh")
+    return unloaded
