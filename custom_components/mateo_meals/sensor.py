@@ -86,8 +86,29 @@ class MateoMealsSensor(CoordinatorEntity[MateoMealsCoordinator], SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
+        # Expose only minimal attributes to avoid large attribute payload warnings.
         data = self.coordinator.data or {}
-        return data
+        meals_today = data.get("today_meals") or []
+        meals_by_date = data.get("meals_by_date") or {}
+        # Provide a compact upcoming mapping for next 5 weekdays including today.
+        try:
+            utc = datetime.UTC  # type: ignore[attr-defined]
+        except AttributeError:  # pragma: no cover
+            from datetime import timezone as _tz
+            utc = _tz.utc
+        today = datetime.now(utc).date()
+        upcoming: dict[str, list[str]] = {}
+        for i in range(5):
+            d = today + timedelta(days=i)
+            key = d.isoformat()
+            if key in meals_by_date:
+                upcoming[key] = meals_by_date[key]
+        return {
+            "today_date": data.get("today_date"),
+            "today_meals": meals_today,
+            "upcoming_meals": upcoming,
+            "exception_days_count": len(data.get("exception_days") or []),
+        }
 
     # Rely on Home Assistant's default entity_id generation (no override)
 
