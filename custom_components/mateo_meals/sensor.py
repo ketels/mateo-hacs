@@ -31,24 +31,11 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    data = entry.data
-    school_id = int(entry.options.get("school_id", data["school_id"]))
-    school_name = entry.options.get("school_name", data["school_name"])  # type: ignore[assignment]
-    cfg = MateoConfig(
-        slug=data["slug"],
-        school_id=school_id,
-        school_name=school_name,
-        municipality_name=data.get("municipality_name", data["slug"]),
-    )
-    update_hours = int(
-        entry.options.get(CONF_UPDATE_INTERVAL_HOURS, DEFAULT_UPDATE_INTERVAL_HOURS)
-    )
-    coordinator = MateoMealsCoordinator(hass, cfg, update_hours=update_hours)
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except Exception as err:  # noqa: BLE001
-        _LOGGER.warning("Initial Mateo Meals data fetch failed: %s", err)
-    COORDINATORS[entry.entry_id] = coordinator
+    coordinator = COORDINATORS.get(entry.entry_id)
+    if not coordinator:
+        _LOGGER.error("Coordinator missing for entry %s; aborting sensor setup", entry.entry_id)
+        return
+    cfg = coordinator._cfg  # internal access acceptable within integration scope
     days_ahead = int(entry.options.get(CONF_DAYS_AHEAD, DEFAULT_DAYS_AHEAD))
     base_sensor = MateoMealsSensor(coordinator, cfg, entry.entry_id)
     day_sensors: list[SensorEntity] = []

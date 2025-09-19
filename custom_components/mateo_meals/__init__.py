@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import logging
+
+from datetime import datetime
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    CONF_UPDATE_INTERVAL_HOURS,
+    DEFAULT_UPDATE_INTERVAL_HOURS,
+)
+from .coordinator import MateoMealsCoordinator, MateoConfig
 
 if TYPE_CHECKING:  # pragma: no cover
     from .coordinator import MateoMealsCoordinator
@@ -36,6 +44,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: D401
+    logger = logging.getLogger(__name__)
+    # Build config (prefer options school selection if present)
+    data = entry.data
+    school_id = int(entry.options.get("school_id", data["school_id"]))
+    school_name = entry.options.get("school_name", data["school_name"])  # type: ignore[assignment]
+    cfg = MateoConfig(
+        slug=data["slug"],
+        school_id=school_id,
+        school_name=school_name,
+        municipality_name=data.get("municipality_name", data["slug"]),
+    )
+    update_hours = int(entry.options.get(CONF_UPDATE_INTERVAL_HOURS, DEFAULT_UPDATE_INTERVAL_HOURS))
+    coordinator = MateoMealsCoordinator(hass, cfg, update_hours=update_hours)
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception as err:  # noqa: BLE001
+        logger.warning("Initial Mateo Meals data fetch failed: %s", err)
+    COORDINATORS[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

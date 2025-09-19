@@ -32,11 +32,15 @@ async def async_setup_entry(
     coord = COORDINATORS.get(entry.entry_id)
     if not coord:
         return
+    coord_cfg = coord._cfg  # existing config
+    # If school changed via options, update a shallow copy for entity naming
+    school_id = int(entry.options.get("school_id", coord_cfg.school_id))
+    school_name = entry.options.get("school_name", coord_cfg.school_name)
     cfg = MateoConfig(
-        slug=entry.data["slug"],
-        school_id=int(entry.data["school_id"]),
-        school_name=entry.data["school_name"],
-        municipality_name=entry.data.get("municipality_name", entry.data["slug"]),
+        slug=coord_cfg.slug,
+        school_id=school_id,
+        school_name=school_name,
+        municipality_name=coord_cfg.municipality_name,
     )
     serving_start = entry.options.get(CONF_SERVING_START, DEFAULT_SERVING_START)
     serving_end = entry.options.get(CONF_SERVING_END, DEFAULT_SERVING_END)
@@ -139,18 +143,24 @@ class MateoMealsCalendarEntity(CoordinatorEntity[MateoMealsCoordinator], Calenda
         if tzinfo is None:
             tzinfo = timezone.utc
         today_local = reference.date()
-        for day_offset in range(days):
-            d = today_local + timedelta(days=day_offset)
-            if not self._include_weekends and d.weekday() >= 5:
+        produced = 0
+        cursor = today_local
+        # Iterate calendar days until we have 'days' school days (or hit a safety cap)
+        safety = 0
+        while produced < days and safety < days * 3:  # safety cap
+            safety += 1
+            if not self._include_weekends and cursor.weekday() >= 5:
+                cursor += timedelta(days=1)
                 continue
-            key = d.isoformat()
+            key = cursor.isoformat()
             names = meals_by_date.get(key) or []
-            if not names:
-                continue
-            start_dt = datetime.combine(d, self._serving_start, tzinfo)
-            end_dt = datetime.combine(d, self._serving_end, tzinfo)
-            summary = "; ".join(names)
-            yield CalendarEvent(summary=summary, start=start_dt, end=end_dt, description=summary)
+            if names:
+                start_dt = datetime.combine(cursor, self._serving_start, tzinfo)
+                end_dt = datetime.combine(cursor, self._serving_end, tzinfo)
+                summary = "; ".join(names)
+                yield CalendarEvent(summary=summary, start=start_dt, end=end_dt, description=summary)
+                produced += 1
+            cursor += timedelta(days=1)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -159,4 +169,5 @@ class MateoMealsCalendarEntity(CoordinatorEntity[MateoMealsCoordinator], Calenda
             "serving_start": self._serving_start.strftime("%H:%M"),
             "serving_end": self._serving_end.strftime("%H:%M"),
             "include_weekends": self._include_weekends,
+            "school_day_counting": (not self._include_weekends),
         }

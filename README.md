@@ -9,18 +9,20 @@ This is a cutom integration for Home Assistant to expose Swedish school lunches 
 
 ## Features
 
-- Base sensor with state = today's meal name
-- Additional fixed day sensors (today + forward configurable number of days)
-- Calendar entity exposing each meal as an event with a configurable serving window
-- Configurable update interval (in hours), days ahead to expose, serving start/end times, and optional weekend inclusion
+- Base sensor with state = today's meal name (or Swedish fallback 'Ingen meny idag')
+- Configurable set of fixed day sensors (today + N forward school days)
+- Weekend skipping logic (if weekends excluded, day offsets count only weekdays)
+- Calendar entity exposing each meal as an event within a serving window
+- Configurable: days ahead, update interval (hours), serving start/end, include/exclude weekends
+- Graceful fallback state "No menu" for future day sensors without published meals (instead of `unknown`)
 
 ## Entities
 
 After configuring a school you will get:
 
-- `sensor.skollunch_<school>` – next/today meal summary (original sensor)
-- `sensor.skollunch_<school>_today` and `sensor.skollunch_<school>_day1..dayN` – per-day menu (state is semicolon-separated meal names, may be `unknown` if no meals yet)
-- `calendar.<school>_menu` – calendar events for each meal (summary = meal name, start/end within configured serving window)
+- `sensor.skollunch_<school>` – today meal summary (legacy base sensor)
+- `sensor.skollunch_<school>_today` and `sensor.skollunch_<school>_day1..dayN` – per‑day menu (semicolon‑separated meal names; state "No menu" if that day currently has no meals published)
+- `calendar.<school>_menu` – calendar events for each meal (summary = meal name, start/end within configured serving window; weekends omitted when excluded)
 
 ## Options
 
@@ -28,28 +30,28 @@ Accessible via the integration's Configure button:
 
 | Option | Description | Default |
 | ------ | ----------- | ------- |
-| Days ahead (`days_ahead`) | Number of forward days (including today) for which fixed sensors are created (max 14) | 5 |
-| Update interval hours (`update_interval_hours`) | How often to poll Mateo endpoints | 6 |
+| Days ahead (`days_ahead`) | Number of forward days (today +) for which fixed sensors are created (max 14). When weekends excluded, this counts school days, not raw days. | 5 |
+| Update interval hours (`update_interval_hours`) | How often to poll Mateo endpoints | 4 |
 | Serving start (`serving_start`) | HH:MM start time applied to calendar events | 10:30 |
-| Serving end (`serving_end`) | HH:MM end time applied to calendar events | 12:30 |
-| Include weekends (`include_weekends`) | If true include Sat/Sun in calendar + sensors (when meals exist) | False |
+| Serving end (`serving_end`) | HH:MM end time applied to calendar events | 13:30 |
+| Include weekends (`include_weekends`) | If true include Sat/Sun in calendar + sensors; otherwise day offsets skip weekends | False |
 
 Changing options triggers a reload of entities (new day sensors added/removed as needed).
 
 ## Calendar Usage
 
-Use any HA calendar consumer (e.g. Calendar panel, automations) to react to upcoming meals. The next event is exposed via the entity's `event` attribute.
+Use any HA calendar consumer (e.g. Calendar panel, automations) to react to upcoming meals. The next (ongoing or upcoming) event is exposed via the entity's `event` property. When weekends are excluded, Saturday/Sunday are filtered out entirely. Each event spans the configured serving window.
 
 ## Migration Notes
 
 If upgrading from a version with only one sensor:
-1. Existing sensor unique_id is preserved; automations/dashboards continue to work.
-2. New day sensors and calendar entity will appear automatically.
-3. Adjust options if you want fewer/more forward days or a different polling frequency.
+1. Existing base sensor `unique_id` is preserved; automations/dashboards continue to work.
+2. New day sensors (weekday‑aware if weekends excluded) and calendar entity appear automatically.
+3. Adjust options for days ahead, intervals, serving window, or weekend inclusion as desired.
 
 ## Localization
 
-Meal names are shown as-is (Swedish). The fallback 'No menu today' string appears only if Swedish text cannot be resolved.
+Meal names are shown as-is (Swedish). The base sensor shows 'Ingen meny idag' when today has no meals. Future day sensors show 'No menu' until meals are published.
 
 
 ### HACS (Recommended)
