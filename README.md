@@ -42,13 +42,6 @@ Changing options triggers a reload of entities (new day sensors added/removed as
 
 Use any HA calendar consumer (e.g. Calendar panel, automations) to react to upcoming meals. The next (ongoing or upcoming) event is exposed via the entity's `event` property. When weekends are excluded, Saturday/Sunday are filtered out entirely. Each event spans the configured serving window.
 
-## Migration Notes
-
-If upgrading from a version with only one sensor:
-1. Existing base sensor `unique_id` is preserved; automations/dashboards continue to work.
-2. New day sensors (weekday‑aware if weekends excluded) and calendar entity appear automatically.
-3. Adjust options for days ahead, intervals, serving window, or weekend inclusion as desired.
-
 ## Localization
 
 Meal names are shown as-is (Swedish). The base sensor shows 'Ingen meny idag' when today has no meals. Future day sensors show 'No menu' until meals are published.
