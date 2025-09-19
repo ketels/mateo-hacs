@@ -18,6 +18,8 @@ from .const import (
     DEFAULT_UPDATE_INTERVAL_HOURS,
     CONF_DAYS_AHEAD,
     DEFAULT_DAYS_AHEAD,
+    CONF_INCLUDE_WEEKENDS,
+    DEFAULT_INCLUDE_WEEKENDS,
 )
 from .coordinator import MateoConfig, MateoMealsCoordinator
 
@@ -50,8 +52,13 @@ async def async_setup_entry(
     days_ahead = int(entry.options.get(CONF_DAYS_AHEAD, DEFAULT_DAYS_AHEAD))
     base_sensor = MateoMealsSensor(coordinator, cfg, entry.entry_id)
     day_sensors: list[SensorEntity] = []
+    include_weekends = bool(entry.options.get(CONF_INCLUDE_WEEKENDS, DEFAULT_INCLUDE_WEEKENDS))
     for offset in range(days_ahead):
-        day_sensors.append(MateoMealsFixedDaySensor(coordinator, cfg, entry.entry_id, offset))
+        day_sensors.append(
+            MateoMealsFixedDaySensor(
+                coordinator, cfg, entry.entry_id, offset, include_weekends=include_weekends
+            )
+        )
     _LOGGER.debug(
         "Adding Mateo Meals sensors (%d day sensors + base) for school %s (entry %s)",
         len(day_sensors),
@@ -122,13 +129,44 @@ class MateoMealsFixedDaySensor(CoordinatorEntity[MateoMealsCoordinator], SensorE
         cfg: MateoConfig,
         entry_id: str,
         day_offset: int,
+        include_weekends: bool = True,
     ) -> None:
         super().__init__(coordinator)
         self._cfg = cfg
         self._day_offset = day_offset
+        self._include_weekends = include_weekends
         self._attr_unique_id = f"{DOMAIN}:{cfg.slug}:{cfg.school_id}:day{day_offset}"
         label = "today" if day_offset == 0 else f"day{day_offset}"
         self._attr_name = f"Skollunch – {cfg.school_name} – {label}"
+
+    def _compute_target_date(self, base: date) -> date:
+        """Return the calendar date this sensor represents.
+
+        If weekends are excluded, offsets count only weekdays (Mon-Fri).
+        day_offset==0 refers to today unless today is a weekend and weekends are excluded;
+        in that case it refers to the next Monday.
+        """
+        if self._include_weekends:
+            return base + timedelta(days=self._day_offset)
+
+        # Shift base to next weekday if today is weekend for offset 0
+        if base.weekday() >= 5:
+            while base.weekday() >= 5:
+                base += timedelta(days=1)
+            if self._day_offset == 0:
+                return base
+
+        if self._day_offset == 0:
+            return base
+
+        # Count forward only weekdays
+        remaining = self._day_offset
+        current = base
+        while remaining > 0:
+            current += timedelta(days=1)
+            if current.weekday() < 5:
+                remaining -= 1
+        return current
 
     @property
     def native_value(self) -> str | None:
@@ -142,10 +180,11 @@ class MateoMealsFixedDaySensor(CoordinatorEntity[MateoMealsCoordinator], SensorE
 
             utc = _tz.utc
         today = datetime.now(utc).date()
-        target: date = today + timedelta(days=self._day_offset)
+        target: date = self._compute_target_date(today)
         meals = meals_by_date.get(target.isoformat()) or []
         if not meals:
-            return None
+            # Provide consistent non-None to avoid 'unknown' for skipped days
+            return "No menu"
         if isinstance(meals, list):
             names = [m for m in meals if isinstance(m, str) and m]
         else:  # defensive
@@ -162,5 +201,11 @@ class MateoMealsFixedDaySensor(CoordinatorEntity[MateoMealsCoordinator], SensorE
 
             utc = _tz.utc
         today = datetime.now(utc).date()
-        target = today + timedelta(days=self._day_offset)
-        return {"date": target.isoformat(), "offset": self._day_offset}
+        target = self._compute_target_date(today)
+        has_meals = bool((self.coordinator.data or {}).get("meals_by_date", {}).get(target.isoformat()))
+        return {
+            "date": target.isoformat(),
+            "offset": self._day_offset,
+            "include_weekends": self._include_weekends,
+            "has_meals": has_meals,
+        }

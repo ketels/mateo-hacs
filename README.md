@@ -7,6 +7,50 @@
 
 This is a cutom integration for Home Assistant to expose Swedish school lunches from Mateo public endpoints.
 
+## Features
+
+- Base sensor with state = today's meal name
+- Additional fixed day sensors (today + forward configurable number of days)
+- Calendar entity exposing each meal as an event with a configurable serving window
+- Configurable update interval (in hours), days ahead to expose, serving start/end times, and optional weekend inclusion
+
+## Entities
+
+After configuring a school you will get:
+
+- `sensor.skollunch_<school>` – next/today meal summary (original sensor)
+- `sensor.skollunch_<school>_today` and `sensor.skollunch_<school>_day1..dayN` – per-day menu (state is semicolon-separated meal names, may be `unknown` if no meals yet)
+- `calendar.<school>_menu` – calendar events for each meal (summary = meal name, start/end within configured serving window)
+
+## Options
+
+Accessible via the integration's Configure button:
+
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| Days ahead (`days_ahead`) | Number of forward days (including today) for which fixed sensors are created (max 14) | 5 |
+| Update interval hours (`update_interval_hours`) | How often to poll Mateo endpoints | 6 |
+| Serving start (`serving_start`) | HH:MM start time applied to calendar events | 10:30 |
+| Serving end (`serving_end`) | HH:MM end time applied to calendar events | 12:30 |
+| Include weekends (`include_weekends`) | If true include Sat/Sun in calendar + sensors (when meals exist) | False |
+
+Changing options triggers a reload of entities (new day sensors added/removed as needed).
+
+## Calendar Usage
+
+Use any HA calendar consumer (e.g. Calendar panel, automations) to react to upcoming meals. The next event is exposed via the entity's `event` attribute.
+
+## Migration Notes
+
+If upgrading from a version with only one sensor:
+1. Existing sensor unique_id is preserved; automations/dashboards continue to work.
+2. New day sensors and calendar entity will appear automatically.
+3. Adjust options if you want fewer/more forward days or a different polling frequency.
+
+## Localization
+
+Meal names are shown as-is (Swedish). The fallback 'No menu today' string appears only if Swedish text cannot be resolved.
+
 
 ### HACS (Recommended)
 
@@ -31,6 +75,19 @@ This is a cutom integration for Home Assistant to expose Swedish school lunches 
 3. Copy the `custom_components/mateo-hacs` folder to your Home Assistant `custom_components` directory.
    - Example: `/config/custom_components/mateo-hacs`
 4. Restart Home Assistant.
+
+## Development / Tests
+
+Run tests with:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+pytest -q
+```
+
+Coverage target: 75%+
 
 
 
