@@ -41,7 +41,7 @@ class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass,
             logger=logging.getLogger(__name__),
             name="MateoMealsCoordinator",
-            update_interval=timedelta(hours=24),
+            update_interval=timedelta(hours=4),
         )
         self._cfg = cfg
 
