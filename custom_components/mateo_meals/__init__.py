@@ -68,22 +68,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     except Exception as err:  # noqa: BLE001
         logger.warning("Initial Mateo Meals data fetch failed: %s", err)
     COORDINATORS[entry.entry_id] = coordinator
+    # Snapshot current options so we can detect which specific values changed later.
+    coordinator.options_snapshot = dict(entry.options)  # type: ignore[attr-defined]
 
-    async def _update_listener(updated_entry: ConfigEntry) -> None:
+    async def _update_listener(hass: HomeAssistant, updated_entry: ConfigEntry) -> None:
         coord = COORDINATORS.get(updated_entry.entry_id)
         if not coord:
             return
-        # Adjust polling interval dynamically if user changed update interval hours.
-        new_hours = int(
-            updated_entry.options.get(CONF_UPDATE_INTERVAL_HOURS, DEFAULT_UPDATE_INTERVAL_HOURS)
+        prev_opts = getattr(coord, "options_snapshot", {})  # type: ignore[attr-defined]
+        new_opts = updated_entry.options
+
+        # If any non-interval option actually changed value, reload the entry so that
+        # entities (day sensors count, calendar days_ahead, school change, serving window)
+        # are reconstructed correctly. We avoid a reload when only the update interval changes.
+        non_interval_changed = any(
+            prev_opts.get(k) != new_opts.get(k)
+            for k in new_opts
+            if k != CONF_UPDATE_INTERVAL_HOURS
         )
-        new_hours = max(1, new_hours)
-        # Only update if changed to avoid resetting loop unnecessarily.
-        if coord.update_interval and coord.update_interval.total_seconds() == new_hours * 3600:
+        if non_interval_changed:
+            coord.options_snapshot = dict(new_opts)  # type: ignore[attr-defined]
+            await hass.config_entries.async_reload(updated_entry.entry_id)
             return
-        coord.update_interval = timedelta(hours=new_hours)
-        # Force a refresh so new schedule has fresh data soon.
-        await coord.async_request_refresh()
+
+        # Otherwise handle a pure polling interval change in-place.
+        new_hours = int(new_opts.get(CONF_UPDATE_INTERVAL_HOURS, DEFAULT_UPDATE_INTERVAL_HOURS))
+        new_hours = max(1, new_hours)
+        if not coord.update_interval or coord.update_interval.total_seconds() != new_hours * 3600:
+            coord.update_interval = timedelta(hours=new_hours)
+            await coord.async_request_refresh()
+        coord.options_snapshot = dict(new_opts)  # type: ignore[attr-defined]
 
     # Attach listener for dynamic option changes.
     entry.async_on_unload(entry.add_update_listener(_update_listener))
