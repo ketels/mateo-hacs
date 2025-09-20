@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers import entity_registry as er
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 
@@ -87,6 +88,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             if k != CONF_UPDATE_INTERVAL_HOURS
         )
         if non_interval_changed:
+            # If days_ahead decreased, proactively remove obsolete day sensors from the entity registry
+            try:
+                old_days = int(prev_opts.get("days_ahead", 5))
+                new_days = int(new_opts.get("days_ahead", 5))
+            except Exception:  # noqa: BLE001
+                old_days = new_days = 0  # fallback
+            if new_days and old_days and new_days < old_days:
+                ent_reg = er.async_get(hass)
+                # Unique IDs for day sensors follow pattern mateo_meals:slug:school_id:day<offset>
+                for entity_id, ent in list(ent_reg.entities.items()):  # type: ignore[attr-defined]
+                    if ent.config_entry_id != updated_entry.entry_id:
+                        continue
+                    if not ent.unique_id.startswith(f"{DOMAIN}:"):
+                        continue
+                    if ":day" not in ent.unique_id:
+                        continue
+                    try:
+                        offset_str = ent.unique_id.rsplit(":day", 1)[1]
+                        offset = int(offset_str)
+                    except Exception:  # noqa: BLE001
+                        continue
+                    if offset >= new_days:
+                        ent_reg.async_remove(entity_id)
             coord.options_snapshot = dict(new_opts)  # type: ignore[attr-defined]
             await hass.config_entries.async_reload(updated_entry.entry_id)
             return
