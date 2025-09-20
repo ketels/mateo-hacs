@@ -4,7 +4,6 @@
   "codeowners": ["@ketels"],
   "config_flow": true,
   "documentation": "https://github.com/ketels/mateo-hacs",
-  "icon": "custom_components/mateo_meals/icon.png",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/ketels/mateo-hacs/issues",
