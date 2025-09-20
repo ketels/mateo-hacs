@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from datetime import date, datetime, timedelta
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -10,7 +12,15 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import COORDINATORS
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    CONF_UPDATE_INTERVAL_HOURS,
+    DEFAULT_UPDATE_INTERVAL_HOURS,
+    CONF_DAYS_AHEAD,
+    DEFAULT_DAYS_AHEAD,
+    CONF_INCLUDE_WEEKENDS,
+    DEFAULT_INCLUDE_WEEKENDS,
+)
 from .coordinator import MateoConfig, MateoMealsCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,28 +31,28 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    data = entry.data
-    school_id = int(entry.options.get("school_id", data["school_id"]))
-    school_name = entry.options.get("school_name", data["school_name"])  # type: ignore[assignment]
-    cfg = MateoConfig(
-        slug=data["slug"],
-        school_id=school_id,
-        school_name=school_name,
-        municipality_name=data.get("municipality_name", data["slug"]),
-    )
-    coordinator = MateoMealsCoordinator(hass, cfg)
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except Exception as err:  # noqa: BLE001
-        _LOGGER.warning("Initial Mateo Meals data fetch failed: %s", err)
-    COORDINATORS[entry.entry_id] = coordinator
-    entity = MateoMealsSensor(coordinator, cfg, entry.entry_id)
+    coordinator = COORDINATORS.get(entry.entry_id)
+    if not coordinator:
+        _LOGGER.error("Coordinator missing for entry %s; aborting sensor setup", entry.entry_id)
+        return
+    cfg = coordinator._cfg  # internal access acceptable within integration scope
+    days_ahead = int(entry.options.get(CONF_DAYS_AHEAD, DEFAULT_DAYS_AHEAD))
+    base_sensor = MateoMealsSensor(coordinator, cfg, entry.entry_id)
+    day_sensors: list[SensorEntity] = []
+    include_weekends = bool(entry.options.get(CONF_INCLUDE_WEEKENDS, DEFAULT_INCLUDE_WEEKENDS))
+    for offset in range(days_ahead):
+        day_sensors.append(
+            MateoMealsFixedDaySensor(
+                coordinator, cfg, entry.entry_id, offset, include_weekends=include_weekends
+            )
+        )
     _LOGGER.debug(
-        "Adding Mateo Meals sensor for school %s (entry %s)",
+        "Adding Mateo Meals sensors (%d day sensors + base) for school %s (entry %s)",
+        len(day_sensors),
         cfg.school_name,
         entry.entry_id,
     )
-    async_add_entities([entity])
+    async_add_entities([base_sensor, *day_sensors])
 
 
 class MateoMealsSensor(CoordinatorEntity[MateoMealsCoordinator], SensorEntity):
@@ -70,7 +80,119 @@ class MateoMealsSensor(CoordinatorEntity[MateoMealsCoordinator], SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
+        # Expose only minimal attributes to avoid large attribute payload warnings.
         data = self.coordinator.data or {}
-        return data
+        meals_today = data.get("today_meals") or []
+        meals_by_date = data.get("meals_by_date") or {}
+        # Provide a compact upcoming mapping for next 5 weekdays including today.
+        try:
+            utc = datetime.UTC  # type: ignore[attr-defined]
+        except AttributeError:  # pragma: no cover
+            from datetime import timezone as _tz
+            utc = _tz.utc
+        today = datetime.now(utc).date()
+        upcoming: dict[str, list[str]] = {}
+        for i in range(5):
+            d = today + timedelta(days=i)
+            key = d.isoformat()
+            if key in meals_by_date:
+                upcoming[key] = meals_by_date[key]
+        return {
+            "today_date": data.get("today_date"),
+            "today_meals": meals_today,
+            "upcoming_meals": upcoming,
+            "exception_days_count": len(data.get("exception_days") or []),
+        }
 
     # Rely on Home Assistant's default entity_id generation (no override)
+
+
+class MateoMealsFixedDaySensor(CoordinatorEntity[MateoMealsCoordinator], SensorEntity):
+    _attr_icon = "mdi:food-hot-dog"
+
+    def __init__(
+        self,
+        coordinator: MateoMealsCoordinator,
+        cfg: MateoConfig,
+        entry_id: str,
+        day_offset: int,
+        include_weekends: bool = True,
+    ) -> None:
+        super().__init__(coordinator)
+        self._cfg = cfg
+        self._day_offset = day_offset
+        self._include_weekends = include_weekends
+        self._attr_unique_id = f"{DOMAIN}:{cfg.slug}:{cfg.school_id}:day{day_offset}"
+        label = "today" if day_offset == 0 else f"day{day_offset}"
+        self._attr_name = f"Skollunch – {cfg.school_name} – {label}"
+
+    def _compute_target_date(self, base: date) -> date:
+        """Return the calendar date this sensor represents.
+
+        If weekends are excluded, offsets count only weekdays (Mon-Fri).
+        day_offset==0 refers to today unless today is a weekend and weekends are excluded;
+        in that case it refers to the next Monday.
+        """
+        if self._include_weekends:
+            return base + timedelta(days=self._day_offset)
+
+        # Shift base to next weekday if today is weekend for offset 0
+        if base.weekday() >= 5:
+            while base.weekday() >= 5:
+                base += timedelta(days=1)
+            if self._day_offset == 0:
+                return base
+
+        if self._day_offset == 0:
+            return base
+
+        # Count forward only weekdays
+        remaining = self._day_offset
+        current = base
+        while remaining > 0:
+            current += timedelta(days=1)
+            if current.weekday() < 5:
+                remaining -= 1
+        return current
+
+    @property
+    def native_value(self) -> str | None:
+        data = self.coordinator.data or {}
+        meals_by_date = data.get("meals_by_date") or {}
+        # Determine target date (UTC date basis as coordinator uses UTC date())
+        try:
+            utc = datetime.UTC  # type: ignore[attr-defined]
+        except AttributeError:  # pragma: no cover
+            from datetime import timezone as _tz
+
+            utc = _tz.utc
+        today = datetime.now(utc).date()
+        target: date = self._compute_target_date(today)
+        meals = meals_by_date.get(target.isoformat()) or []
+        if not meals:
+            # Provide consistent non-None to avoid 'unknown' for skipped days
+            return "No menu"
+        if isinstance(meals, list):
+            names = [m for m in meals if isinstance(m, str) and m]
+        else:  # defensive
+            return None
+        return "; ".join(names) if names else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        # Provide the date this sensor represents
+        try:
+            utc = datetime.UTC  # type: ignore[attr-defined]
+        except AttributeError:  # pragma: no cover
+            from datetime import timezone as _tz
+
+            utc = _tz.utc
+        today = datetime.now(utc).date()
+        target = self._compute_target_date(today)
+        has_meals = bool((self.coordinator.data or {}).get("meals_by_date", {}).get(target.isoformat()))
+        return {
+            "date": target.isoformat(),
+            "offset": self._day_offset,
+            "include_weekends": self._include_weekends,
+            "has_meals": has_meals,
+        }

@@ -1,43 +1,63 @@
 {
   "title": "Mateo School Lunch",
-  {
-    "title": "Mateo School Meals",
-    "config": {
-      "step": {
-        "user": {
-          "title": "Connect Mateo",
-          "description": "Select municipality and school to fetch the meal plan.",
-          "data": {
-            "school": "School",
-            "municipality": "Municipality"
-          }
-        }
-      },
-      "error": {
-        "cannot_connect": "Could not connect to Mateo.",
-        "unknown": "Unknown error."
-      },
-      "abort": {
-        "already_configured": "This school is already configured."
-      }
-    },
-    "services": {
-      "refresh": {
-        "name": "Refresh Mateo data",
-        "description": "Force an immediate update from Mateo.",
-        "fields": {
-          "entry_id": "Entry ID"
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Mateo",
+        "description": "Select municipality and school to fetch the meal plan.",
+        "data": {
+          "school": "School",
+          "municipality": "Municipality"
         }
       }
     },
-    "entity": {
-      "sensor": {
-        "meal": {
-          "name": "School Lunch",
-          "state": {
-            "no_menu": "No menu today"
-          }
+    "error": {
+      "cannot_connect": "Could not connect to Mateo.",
+      "unknown": "Unknown error."
+    },
+    "abort": {
+      "already_configured": "This school is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "school": {
+        "title": "Mateo options",
+        "description": "Adjust meal lookup, update frequency and display settings.",
+        "data": {
+          "school": "School",
+          "days_ahead": "Days ahead",
+          "update_interval_hours": "Update interval (hours)",
+          "serving_start": "Serving window start",
+          "serving_end": "Serving window end",
+          "include_weekends": "Include weekends"
+        }
+      }
+    },
+    "error": {
+      "invalid_time": "Invalid time format (HH:MM)"
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh Mateo data",
+      "description": "Force an immediate update from Mateo.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional: target specific config entry; omit to refresh all."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "meal": {
+        "name": "School Lunch",
+        "state": {
+          "no_menu": "No menu today"
         }
       }
     }
   }
+}

@@ -36,12 +36,12 @@ class MateoConfig:
 
 
 class MateoMealsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    def __init__(self, hass: HomeAssistant, cfg: MateoConfig) -> None:
+    def __init__(self, hass: HomeAssistant, cfg: MateoConfig, update_hours: int = 4) -> None:
         super().__init__(
             hass,
             logger=logging.getLogger(__name__),
             name="MateoMealsCoordinator",
-            update_interval=timedelta(hours=4),
+            update_interval=timedelta(hours=max(1, update_hours)),
         )
         self._cfg = cfg
 

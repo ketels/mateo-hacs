@@ -1,13 +1,13 @@
 {
   "domain": "mateo_meals",
   "name": "Mateo School Meals",
-  "version": "1.1.0",
-  "documentation": "https://github.com/ketels/mateo-hacs",
-  "issue_tracker": "https://github.com/ketels/mateo-hacs/issues",
-  "requirements": [],
   "codeowners": ["@ketels"],
-  "iot_class": "cloud_polling",
+  "config_flow": true,
+  "documentation": "https://github.com/ketels/mateo-hacs",
   "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/ketels/mateo-hacs/issues",
   "loggers": ["custom_components.mateo_meals"],
-  "config_flow": true
+  "requirements": [],
+  "version": "1.1.0"
 }

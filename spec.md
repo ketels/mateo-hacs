@@ -2,12 +2,14 @@
 
 # Mateo School Meals — HACS Integration Specification
 
-**Goal**
-Expose Swedish school lunches from Mateo’s public endpoints in Home Assistant (HA). A single **sensor entity** per configured school provides:
-- **state**: a compact summary of **today’s** meals
-- **attributes**: full meals for the **current** and **next** ISO week, plus exception days (if any)
+**Goal (Updated)**
+Expose Swedish school lunches from Mateo’s public endpoints in Home Assistant (HA) with:
+- One **base sensor**: state = today’s meals summary (fallback 'Ingen meny idag' if empty)
+- A configurable set of **fixed day sensors** (today + N forward SCHOOL days; weekday-aware when weekends excluded)
+- A **calendar entity** listing each meal as an event within a configurable serving window (optionally excluding weekends)
+- Full week(s) meal data stored in coordinator state (attributes of base sensor) for automations / templates
 
-Updates **once per day**. Empty days/weeks are simply absent (not cached or kept). Setup is done via the HA UI (config flow). Images are ignored.
+Update interval is now **configurable (hours)** via the options flow (default 4h). Empty days/weeks are absent. Setup and all changes performed via UI.
 
 ---
 
@@ -79,17 +81,25 @@ Use HA **config entries** so setup is done in the UI.
 
 ---
 
-## Entity Model
+## Entity Model (Updated)
 
-Create **one sensor** per config entry:
-- **entity_id**: `sensor.mateo_meals_{slug}_{school_id}`
-- **name**: `Skollunch – {school_name}`
+Base Sensor (legacy unique_id preserved):
+- `sensor.skollunch_{school}` – today’s meals summary
 
-**State (string, Swedish as-is)**
-- Join today’s meal names (e.g., `"Korv stroganoff; Salladsbuffé"`).
-- If no meals for today: `"Ingen meny idag"` (do **not** reuse old data).
+Fixed Day Sensors (dynamic count):
+- `sensor.skollunch_{school}_today`, `sensor.skollunch_{school}_day1..dayN`
+  - State: semicolon-separated meal names for that date or literal "No menu" if not published (avoid `unknown`)
+  - Offsets count only weekdays when `include_weekends == False` (e.g. if today is Friday and weekends excluded, `day1` is Monday)
+  - Attributes: `{ date: YYYY-MM-DD, offset: int, include_weekends: bool, has_meals: bool }`
 
-**Attributes**
+Calendar Entity:
+- `calendar.{school}_menu` – events per meal
+  - Event summary: meal name(s) joined by '; '
+  - Start/End: serving window applied to the date (configurable HH:MM)
+  - Weekends skipped entirely when `include_weekends` is False
+  - `event` property supplies next ongoing or upcoming meal
+
+Base Sensor Attributes (unchanged core schema, still source of weekly data):
 ```yaml
 municipality_slug: "molndal"
 municipality_name: "Mölndal"
@@ -115,15 +125,13 @@ source: "mateo.{slug}"
 
 ---
 
-## Update Strategy
+## Update Strategy (Revised)
 
-- Use **DataUpdateCoordinator** and a **CoordinatorEntity** sensor. Poll **daily** at local midnight (system tz) and on HA start.
-- On each refresh:
-  1. Compute current ISO week `YYYY-Www` and next ISO week (weeks start Monday).
-  2. Fetch 2 payloads: `{school_id}_{week}` for current and next week.
-  3. Normalize dates to local date (no time) and filter to Mon–Fri.
-  4. Build attributes; **do not** persist or surface absent days/weeks.
-  5. Derive state from **today** only.
+- **DataUpdateCoordinator** with `update_interval = timedelta(hours=update_interval_hours)` (options, default 4).
+- Refresh triggered on HA start and then every configured interval.
+- Same dual-week fetch logic; meals merged into `meals_by_date`.
+- Day sensors derive their states from `meals_by_date` on access (no extra I/O).
+- Calendar entity builds events lazily per update and caches next event.
 
 **Network hygiene**
 - Use `aiohttp` session from HA.
@@ -132,11 +140,12 @@ source: "mateo.{slug}"
 
 ---
 
-## Error Handling
+## Error Handling (Unchanged + Extensions)
 
 - If any fetch fails (network/5xx): entity becomes `unavailable` until next run.
 - If a week exists but is an empty JSON array: keep attributes for that week **absent** (do not synthesize placeholders).
-- If today has no meals: state `"Ingen meny idag"` and `today_meals: []`.
+- If today has no meals: base sensor state `"Ingen meny idag"` (fallback English 'No menu today') and `today_meals: []`.
+- Future day sensors without meals use literal `"No menu"` (never `unknown`).
 - If municipality or school becomes invalid (e.g., repeated 404 on districts), create a persistent notification with an action to open Options and reselect.
 
 ---
@@ -166,7 +175,7 @@ LICENSE
 
 ---
 
-## Implementation Notes
+## Implementation Notes (Changes Highlighted)
 
 **const.py**
 ```python
@@ -184,13 +193,12 @@ BASE_MENU = "https://objects.dc-fbg1.glesys.net/mateo.{slug}/menus/app/{school_i
   - Optionally read `districts.json` once per boot to hydrate `exception_days` (cache per slug).
 
 **sensor.py**
-- `MateoMealsSensor(CoordinatorEntity, SensorEntity)`:
-  - `native_value`: join today’s `meals[*].name` or `"Ingen meny idag"`.
-  - `extra_state_attributes`: dict described above.
+- `MateoMealsSensor` (base) unchanged semantics.
+- `MateoMealsFixedDaySensor` new class for offset days.
 
 **config_flow.py**
-- 2 steps as described; network probe on finish; map errors to HA flow errors (`cannot_connect`, `unknown`).
-- `unique_id = f"mateo_meals:{slug}:{school_id}"` to avoid duplicates.
+- Adds options for: `days_ahead`, `update_interval_hours`, `serving_start`, `serving_end`, `include_weekends` alongside school change.
+- Static `async_get_options_flow` method for HA to discover options handler.
 
 **strings / translations**
 - Keep UI texts in English + Swedish (`translations/en.json`, `sv.json`).
@@ -202,17 +210,19 @@ BASE_MENU = "https://objects.dc-fbg1.glesys.net/mateo.{slug}/menus/app/{school_i
 
 ## Testing & QA
 
-- **Unit tests**: config flow (happy path; network fail then recover), coordinator parsing (week switch edge cases; empty week), sensor state derivation (no meals today). Aim for full config-flow coverage.
+- **Unit tests**: config flow (happy path; network fail then recover), coordinator parsing (week switch edge cases; empty week), sensor state derivation (no meals today + weekday skipping), calendar events (serving window, weekend exclusion, next event selection). Current coverage ~83% (>75% target).
 - **Time edge cases**: Sundays and Mondays around ISO week rollover; New Year ISO week 1; Sweden timezone (`Europe/Stockholm`).
 - **Network**: simulate 404 for next week (not yet published), empty array responses, and transient TLS/network errors.
 - **HACS**: validate `hacs.json` + repo layout recognized by HACS; run basic HA integration validation.
 
 ---
 
-## Acceptance Criteria (Done)
+## Acceptance Criteria (Updated Done)
 
-- Add integration via UI → pick municipality → pick school → sensor created.
-- After creation (and after next daily tick or restart), sensor shows today’s meals in **state** and week data in **attributes**.
-- Empty days/weeks are not present in attributes.
-- Entity reliably updates daily and on HA restart.
-- HACS recognizes the repo (installs, shows metadata) and HA has no blocking validation warnings.
+- Integration install & initial config unchanged (municipality + school).
+- Base sensor state reflects today’s meals (or "Ingen meny idag").
+- Configurable forward day sensors created (correct count reflects options changes).
+- Calendar entity lists events within serving window; `event` surfaces next upcoming meal.
+- Options adjustments (interval, serving window, days ahead, weekends) propagate without re-adding integration.
+- Coordinator obeys updated polling interval after option change.
+- All legacy automations referencing old sensor continue to work.

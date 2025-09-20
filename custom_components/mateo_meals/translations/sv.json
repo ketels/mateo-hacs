@@ -19,12 +19,34 @@
       "already_configured": "Denna skola är redan konfigurerad."
     }
   },
+  "options": {
+    "step": {
+      "school": {
+        "title": "Mateo-alternativ",
+        "description": "Justera hämtning, uppdateringsfrekvens och visningsinställningar.",
+        "data": {
+          "school": "Skola",
+          "days_ahead": "Dagar framåt",
+          "update_interval_hours": "Uppdateringsintervall (timmar)",
+          "serving_start": "Serveringsfönster start",
+          "serving_end": "Serveringsfönster slut",
+          "include_weekends": "Inkludera helger"
+        }
+      }
+    },
+    "error": {
+      "invalid_time": "Ogiltigt tidsformat (HH:MM)"
+    }
+  },
   "services": {
     "refresh": {
       "name": "Uppdatera Mateo-data",
       "description": "Tvinga fram en omedelbar uppdatering från Mateo.",
       "fields": {
-        "entry_id": "Entry ID"
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Valfritt: ange ett specifikt config entry-ID; utelämna för alla."
+        }
       }
     }
   },

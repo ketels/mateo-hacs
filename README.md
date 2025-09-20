@@ -7,6 +7,45 @@
 
 This is a cutom integration for Home Assistant to expose Swedish school lunches from Mateo public endpoints.
 
+## Features
+
+- Base sensor with state = today's meal name (or Swedish fallback 'Ingen meny idag')
+- Configurable set of fixed day sensors (today + N forward school days)
+- Weekend skipping logic (if weekends excluded, day offsets count only weekdays)
+- Calendar entity exposing each meal as an event within a serving window
+- Configurable: days ahead, update interval (hours), serving start/end, include/exclude weekends
+- Graceful fallback state "No menu" for future day sensors without published meals (instead of `unknown`)
+
+## Entities
+
+After configuring a school you will get:
+
+- `sensor.skollunch_<school>` – today meal summary (legacy base sensor)
+- `sensor.skollunch_<school>_today` and `sensor.skollunch_<school>_day1..dayN` – per‑day menu (semicolon‑separated meal names; state "No menu" if that day currently has no meals published)
+- `calendar.<school>_menu` – calendar events for each meal (summary = meal name, start/end within configured serving window; weekends omitted when excluded)
+
+## Options
+
+Accessible via the integration's Configure button:
+
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| Days ahead (`days_ahead`) | Number of forward days (today +) for which fixed sensors are created (max 14). When weekends excluded, this counts school days, not raw days. | 5 |
+| Update interval hours (`update_interval_hours`) | How often to poll Mateo endpoints | 4 |
+| Serving start (`serving_start`) | HH:MM start time applied to calendar events | 10:30 |
+| Serving end (`serving_end`) | HH:MM end time applied to calendar events | 13:30 |
+| Include weekends (`include_weekends`) | If true include Sat/Sun in calendar + sensors; otherwise day offsets skip weekends | False |
+
+Changing options triggers a reload of entities (new day sensors added/removed as needed).
+
+## Calendar Usage
+
+Use any HA calendar consumer (e.g. Calendar panel, automations) to react to upcoming meals. The next (ongoing or upcoming) event is exposed via the entity's `event` property. When weekends are excluded, Saturday/Sunday are filtered out entirely. Each event spans the configured serving window.
+
+## Localization
+
+Meal names are shown as-is (Swedish). The base sensor shows 'Ingen meny idag' when today has no meals. Future day sensors show 'No menu' until meals are published.
+
 
 ### HACS (Recommended)
 
@@ -31,6 +70,19 @@ This is a cutom integration for Home Assistant to expose Swedish school lunches 
 3. Copy the `custom_components/mateo-hacs` folder to your Home Assistant `custom_components` directory.
    - Example: `/config/custom_components/mateo-hacs`
 4. Restart Home Assistant.
+
+## Development / Tests
+
+Run tests with:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+pytest -q
+```
+
+Coverage target: 75%+
 
 
 

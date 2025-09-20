@@ -2,6 +2,5 @@
   "name": "Mateo Meals",
   "country": "SE",
   "homeassistant": "2024.12.0",
-  "render_readme": true,
-  "domains": ["mateo_meals"]
+  "render_readme": true
 }
