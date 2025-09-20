@@ -9,13 +9,13 @@
 - Reduce sensor attribute size; improve meal data normalization.
 - Translation schema fixes; manifest and hacs.json compliance adjustments.
 - Developer convenience scripts for resetting and running HA dev instance.
-
+ 
 ## 1.0.0 - 2025-09-15
 - First stable feature set.
 - Core meal sensor with daily data retrieval.
 - Basic attribute formatting and error handling.
 - Initial DataUpdateCoordinator implementation.
 - Added refresh service for manual updates.
-
+ 
 ## 0.1.0
 - Initial scaffold for HACS integration
