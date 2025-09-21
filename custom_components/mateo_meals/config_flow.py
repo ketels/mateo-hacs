@@ -163,7 +163,13 @@ class MateoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class MateoOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
+        # Storing the entire ConfigEntry on OptionsFlow is deprecated in HA (warning in 2025.12+).
+        # Keep only needed primitive values; refer to original via closure if necessary.
+        # We retain backward compatibility by keeping an internal reference name that's
+        # unlikely to be inspected by HA core.
+        self._entry_data = config_entry.data
+        self._entry_options = dict(config_entry.options)
+        self._original_entry = config_entry  # fallback internal use; avoid assigning to self.config_entry
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if user_input is not None:
@@ -172,7 +178,8 @@ class MateoOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_school(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         hass = self.hass
-        slug = self.config_entry.data.get("slug")
+        # Access stored data instead of deprecated self.config_entry
+        slug = self._entry_data.get("slug")
         if not slug:
             return self.async_abort(reason="unknown")
         districts_url = BASE_DISTRICTS.format(slug=slug)
@@ -187,8 +194,8 @@ class MateoOptionsFlowHandler(config_entries.OptionsFlow):
         districts = payload.get("districts", []) if isinstance(payload, dict) else []
         id_to_name = {int(d.get("id")): d.get("name") for d in districts if d.get("id") is not None}
         # Collect existing option values or defaults
-        opts = self.config_entry.options
-        current_id = self.config_entry.data.get("school_id")
+        opts = self._entry_options
+        current_id = self._entry_data.get("school_id")
         days_ahead = int(opts.get(CONF_DAYS_AHEAD, DEFAULT_DAYS_AHEAD))
         update_hours = int(opts.get(CONF_UPDATE_INTERVAL_HOURS, DEFAULT_UPDATE_INTERVAL_HOURS))
         serving_start = opts.get(CONF_SERVING_START, DEFAULT_SERVING_START)

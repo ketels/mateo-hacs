@@ -25,3 +25,24 @@ disallow_untyped_defs = true
 no_implicit_optional = true
 strict_equality = true
 
+[project]
+name = "mateo-hacs"
+version = "1.2.2"
+description = "Home Assistant Mateo School Meals integration"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [ { name = "ketels" } ]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+	"pytest",
+	"pytest-asyncio",
+	"coverage",
+	"ruff",
+	"mypy"
+]
+
+[tool.setuptools]
+packages = ["custom_components.mateo_meals"]
+
