@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2 - 2025-09-21
+Maintenance:
+- Remove deprecated explicit `config_entry` assignment in options flow (prevents upcoming 2025.12 warning from escalating to failure).
+- Internal restructuring of options handler to store only needed data/options snapshots.
+
 ## 1.2.1 - 2025-09-20
 Bugfix release:
 - Fix options flow: changing non-interval options (days ahead, school, serving window, include weekends) now triggers an automatic config entry reload so entities are recreated correctly.
